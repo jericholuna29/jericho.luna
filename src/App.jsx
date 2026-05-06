@@ -419,6 +419,11 @@ function App() {
       </div>
       <div className="custom-cursor" ref={cursorRef} aria-hidden="true"></div>
       <div className="custom-cursor-ring" ref={cursorRingRef} aria-hidden="true"></div>
+      <div className="bg-matrix" aria-hidden="true"></div>
+      <div className="bg-orb bg-orb-1" aria-hidden="true"></div>
+      <div className="bg-orb bg-orb-2" aria-hidden="true"></div>
+      <div className="bg-dots bg-dots-primary" aria-hidden="true"></div>
+      <div className="bg-dots bg-dots-secondary" aria-hidden="true"></div>
       <div className="bg-shape bg-shape-1" aria-hidden="true"></div>
       <div className="bg-shape bg-shape-2" aria-hidden="true"></div>
 
