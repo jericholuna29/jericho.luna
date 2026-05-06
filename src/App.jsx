@@ -1,18 +1,18 @@
 import React, { useEffect, useRef, useState } from 'react';
 
 const profileImage = new URL('../assets/profile/jericho profile.jpeg', import.meta.url).href;
-const previousWorkSlides = Object.entries(
-  import.meta.glob('../assets/previous-work/*.png', { eager: true, import: 'default' })
-)
-  .map(([path, src]) => {
+const previousWorkModules = import.meta.glob('../assets/previous-work/*.png', { import: 'default' });
+const previousWorkSlides = Object.keys(previousWorkModules)
+  .map((path) => {
     const fileName = path.split('/').pop()?.replace(/\.png$/i, '') ?? 'Previous work';
     const title = fileName
       .replace(/[-_]+/g, ' ')
       .replace(/\b\w/g, (character) => character.toUpperCase());
 
     return {
-      src,
+      path,
       title,
+      load: previousWorkModules[path],
     };
   })
   .sort((firstItem, secondItem) =>
@@ -195,6 +195,68 @@ function SectionHeader({ kicker, title }) {
       <p className="kicker">{kicker}</p>
       <h2>{title}</h2>
     </div>
+  );
+}
+
+function PreviousWorkCard({ slide, index, shouldPreload }) {
+  const [src, setSrc] = useState(null);
+  const rootRef = useRef(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!shouldPreload) return undefined;
+
+    Promise.resolve(slide.load?.()).then((loadedSrc) => {
+      if (!cancelled) setSrc(loadedSrc);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [shouldPreload, slide]);
+
+  useEffect(() => {
+    if (src) return undefined;
+    const node = rootRef.current;
+    if (!node) return undefined;
+
+    let cancelled = false;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (!entry.isIntersecting) return;
+          observer.disconnect();
+          Promise.resolve(slide.load?.()).then((loadedSrc) => {
+            if (!cancelled) setSrc(loadedSrc);
+          });
+        });
+      },
+      { root: node.parentElement, rootMargin: '200px 0px', threshold: 0.01 }
+    );
+
+    observer.observe(node);
+    return () => {
+      cancelled = true;
+      observer.disconnect();
+    };
+  }, [slide, src]);
+
+  return (
+    <article className="card previous-work-card" ref={rootRef}>
+      <div className="previous-work-media">
+        {src ? (
+          <img
+            src={src}
+            alt={`Previous work ${index + 1}`}
+            loading="lazy"
+            decoding="async"
+            fetchPriority="low"
+          />
+        ) : (
+          <div className="previous-work-skeleton" aria-label="Loading previous work preview"></div>
+        )}
+      </div>
+    </article>
   );
 }
 
@@ -630,6 +692,9 @@ function App() {
                 id="profile-image"
                 src={profileImage}
                 alt="Portrait of Jericho Luna"
+                loading="eager"
+                decoding="async"
+                fetchPriority="high"
                 onError={() => setProfileMissing(true)}
               />
               <span className="profile-fallback" id="profile-fallback" aria-hidden="true">
@@ -680,11 +745,12 @@ function App() {
             <div className="previous-work-carousel" ref={previousWorkCarouselRef} aria-label="Previous website and funnel design carousel">
               {previousWorkSlides.length > 0 ? (
                 previousWorkSlides.map((slide, index) => (
-                  <article className="card previous-work-card" key={`${slide.title}-${index}`}>
-                    <div className="previous-work-media">
-                      <img src={slide.src} alt={`Previous work ${index + 1}`} loading="lazy" />
-                    </div>
-                  </article>
+                  <PreviousWorkCard
+                    key={`${slide.title}-${index}`}
+                    slide={slide}
+                    index={index}
+                    shouldPreload={index < 2}
+                  />
                 ))
               ) : (
                 <article className="card previous-work-card previous-work-empty">

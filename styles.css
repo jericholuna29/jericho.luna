@@ -27,6 +27,36 @@
 
 html {
   scroll-behavior: smooth;
+  overflow-x: clip;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  .bg-matrix,
+  .bg-matrix::before,
+  .bg-orb,
+  .bg-dots,
+  .bg-shape {
+    animation: none !important;
+    transition: none !important;
+  }
+
+  .bg-orb,
+  .bg-shape {
+    filter: none !important;
+  }
+
+  .site-header {
+    backdrop-filter: none !important;
+  }
+
+  .custom-cursor,
+  .custom-cursor-ring {
+    display: none !important;
+  }
 }
 
 body {
@@ -40,7 +70,14 @@ body {
     linear-gradient(135deg, #070b14 0%, #0d1320 48%, #0b1020 100%);
   line-height: 1.6;
   min-height: 100vh;
-  overflow-x: hidden;
+  overflow-x: clip;
+}
+
+img,
+video,
+canvas,
+svg {
+  max-width: 100%;
 }
 
 @media (pointer: fine) {
@@ -66,6 +103,25 @@ body {
   transform: translate3d(-50%, -50%, 0);
   transition: opacity 0.25s ease, transform 0.08s linear;
   will-change: transform;
+}
+
+.previous-work-skeleton {
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  border-radius: 14px;
+  background:
+    linear-gradient(90deg, rgba(255, 255, 255, 0.06) 0%, rgba(255, 255, 255, 0.12) 35%, rgba(255, 255, 255, 0.06) 70%);
+  background-size: 240% 100%;
+  animation: skeletonShimmer 1.2s ease-in-out infinite;
+}
+
+@keyframes skeletonShimmer {
+  0% {
+    background-position: 100% 0;
+  }
+  100% {
+    background-position: 0 0;
+  }
 }
 
 .custom-cursor {
