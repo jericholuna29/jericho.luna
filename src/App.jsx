@@ -1,6 +1,26 @@
 import React, { useEffect, useRef, useState } from 'react';
 
 const profileImage = new URL('../assets/profile/jericho profile.jpeg', import.meta.url).href;
+const previousWorkSlides = Object.entries(
+  import.meta.glob('../assets/previous-work/*.png', { eager: true, import: 'default' })
+)
+  .map(([path, src]) => {
+    const fileName = path.split('/').pop()?.replace(/\.png$/i, '') ?? 'Previous work';
+    const title = fileName
+      .replace(/[-_]+/g, ' ')
+      .replace(/\b\w/g, (character) => character.toUpperCase());
+
+    return {
+      src,
+      title,
+    };
+  })
+  .sort((firstItem, secondItem) =>
+    firstItem.title.localeCompare(secondItem.title, undefined, {
+      numeric: true,
+      sensitivity: 'base',
+    })
+  );
 
 const services = [
   {
@@ -187,6 +207,7 @@ function App() {
   const cursorRef = useRef(null);
   const cursorRingRef = useRef(null);
   const scrollerRef = useRef(null);
+  const previousWorkCarouselRef = useRef(null);
 
   useEffect(() => {
     const items = document.querySelectorAll('.reveal');
@@ -403,6 +424,108 @@ function App() {
     };
   }, []);
 
+  useEffect(() => {
+    const carousel = previousWorkCarouselRef.current;
+    if (!carousel || previousWorkSlides.length <= 1) return undefined;
+
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (prefersReducedMotion) return undefined;
+
+    let isDown = false;
+    let startX = 0;
+    let scrollLeft = 0;
+    let dragged = false;
+    const dragThreshold = 6;
+
+    const handlePointerDown = (event) => {
+      if (event.button !== 0) return;
+
+      isDown = true;
+      dragged = false;
+      carousel.classList.add('is-dragging');
+      carousel.style.userSelect = 'none';
+      startX = event.clientX;
+      scrollLeft = carousel.scrollLeft;
+
+      try {
+        carousel.setPointerCapture?.(event.pointerId);
+      } catch {
+        // ignore pointer capture issues
+      }
+
+      event.preventDefault();
+    };
+
+    const handlePointerMove = (event) => {
+      if (!isDown) return;
+
+      const walk = startX - event.clientX;
+      if (!dragged && Math.abs(walk) > dragThreshold) {
+        dragged = true;
+      }
+
+      carousel.scrollLeft = scrollLeft + walk;
+    };
+
+    const clearDrag = () => {
+      if (!isDown) return;
+
+      isDown = false;
+      carousel.classList.remove('is-dragging');
+      carousel.style.userSelect = '';
+    };
+
+    const handleClick = (event) => {
+      if (dragged) {
+        event.preventDefault();
+        event.stopPropagation();
+        dragged = false;
+      }
+    };
+
+    let intervalId = window.setInterval(() => {
+      if (isDown) return;
+
+      const cards = carousel.querySelectorAll('.previous-work-card');
+      const firstCard = cards[0];
+
+      if (!firstCard) return;
+
+      const cardWidth = firstCard.getBoundingClientRect().width;
+      const carouselStyles = window.getComputedStyle(carousel);
+      const gapValue = carouselStyles.columnGap || carouselStyles.gap || '0';
+      const gap = Number.parseFloat(gapValue) || 0;
+      const step = cardWidth + gap;
+      const maxScrollLeft = carousel.scrollWidth - carousel.clientWidth - 8;
+      const nextScrollLeft = carousel.scrollLeft + step;
+
+      if (nextScrollLeft >= maxScrollLeft) {
+        carousel.scrollTo({ left: 0, behavior: 'smooth' });
+        return;
+      }
+
+      carousel.scrollBy({ left: step, behavior: 'smooth' });
+    }, 4000);
+
+    carousel.addEventListener('pointerdown', handlePointerDown, { passive: false });
+    carousel.addEventListener('pointermove', handlePointerMove);
+    carousel.addEventListener('pointerup', clearDrag);
+    carousel.addEventListener('pointercancel', clearDrag);
+    carousel.addEventListener('pointerleave', clearDrag);
+    carousel.addEventListener('click', handleClick, true);
+
+    return () => {
+      window.clearInterval(intervalId);
+      intervalId = 0;
+      carousel.removeEventListener('pointerdown', handlePointerDown);
+      carousel.removeEventListener('pointermove', handlePointerMove);
+      carousel.removeEventListener('pointerup', clearDrag);
+      carousel.removeEventListener('pointercancel', clearDrag);
+      carousel.removeEventListener('pointerleave', clearDrag);
+      carousel.removeEventListener('click', handleClick, true);
+    };
+  }, []);
+
   const toggleProject = (projectId) => {
     setOpenProjects((current) => ({
       ...current,
@@ -548,6 +671,34 @@ function App() {
               </ul>
             </article>
           </div>
+        </section>
+
+        <section id="previous-work" className="section container reveal previous-work-section">
+          <article className="card previous-work-panel">
+            <SectionHeader kicker="Previous Work" title="Previous Website and Funnel Design" />
+
+            <div className="previous-work-carousel" ref={previousWorkCarouselRef} aria-label="Previous website and funnel design carousel">
+              {previousWorkSlides.length > 0 ? (
+                previousWorkSlides.map((slide, index) => (
+                  <article className="card previous-work-card" key={`${slide.title}-${index}`}>
+                    <div className="previous-work-media">
+                      <img src={slide.src} alt={`Previous work ${index + 1}`} loading="lazy" />
+                    </div>
+                  </article>
+                ))
+              ) : (
+                <article className="card previous-work-card previous-work-empty">
+                  <div className="previous-work-media previous-work-empty-media">
+                    <div className="previous-work-placeholder">
+                      <i className="bi bi-images" aria-hidden="true"></i>
+                      <h3>Drop your PNG files here</h3>
+                      <p>Place previous website and funnel design images in assets/previous-work.</p>
+                    </div>
+                  </div>
+                </article>
+              )}
+            </div>
+          </article>
         </section>
 
         <section id="services" className="section container reveal">
